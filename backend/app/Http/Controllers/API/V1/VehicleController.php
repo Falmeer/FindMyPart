@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API\V1;
 
+use App\Events\VehicleListed;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Vehicle\StoreVehicleRequest;
 use App\Http\Resources\Vehicle\VehicleResource;
@@ -60,13 +61,15 @@ class VehicleController extends Controller
                 VehicleImage::create([
                     'salvaged_vehicle_id' => $vehicle->id,
                     'path' => $path,
-                    'url' => Storage::url($path),
+                    'url' => url('api/v1/files/' . $path),
                     'is_primary' => $index === 0,
                 ]);
             }
         }
 
         $vehicle->load(['images', 'user']);
+
+        VehicleListed::dispatch($vehicle->id);
 
         return response()->json([
             'success' => true,

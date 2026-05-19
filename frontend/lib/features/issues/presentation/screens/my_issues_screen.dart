@@ -21,7 +21,7 @@ class MyIssuesScreen extends ConsumerWidget {
             ? const EmptyState(
                 icon: Icons.report_problem_outlined,
                 title: 'No issues posted yet',
-                subtitle: 'Post a car issue and garages will reach out with offers',
+                subtitle: 'Post a car issue and get answers from the community',
               )
             : ListView.separated(
                 padding: const EdgeInsets.all(16),
@@ -82,10 +82,10 @@ class _IssueCard extends StatelessWidget {
             const SizedBox(height: 10),
             Row(
               children: [
-                const Icon(Icons.local_offer_outlined, size: 14, color: AppColors.accent),
+                const Icon(Icons.chat_bubble_outline, size: 14, color: AppColors.accent),
                 const SizedBox(width: 4),
                 Text(
-                  '${issue.offerCount} offer${issue.offerCount == 1 ? '' : 's'}',
+                  '${issue.commentCount} comment${issue.commentCount == 1 ? '' : 's'}',
                   style: const TextStyle(fontSize: 12, color: AppColors.accent, fontWeight: FontWeight.w600),
                 ),
                 const Spacer(),

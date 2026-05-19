@@ -11,6 +11,7 @@ import '../../../spare_parts/presentation/widgets/spare_part_card.dart';
 import '../../../spare_parts/providers/spare_parts_provider.dart';
 import '../../../garages/presentation/widgets/garage_card.dart';
 import '../../../garages/providers/garages_provider.dart';
+import '../../../notifications/providers/notifications_provider.dart';
 import '../widgets/home_banner.dart';
 import '../widgets/category_grid.dart';
 import '../widgets/search_bar_widget.dart';
@@ -26,13 +27,18 @@ class HomeScreen extends ConsumerWidget {
     final garagesAsync = ref.watch(nearbyGaragesProvider);
 
     return Scaffold(
+      floatingActionButton: FloatingActionButton.small(
+        onPressed: () => context.push('/ai-chatbot'),
+        tooltip: 'AI Chatbot',
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        child: const Icon(Icons.smart_toy_rounded, size: 20),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
       appBar: AppBar(
         title: _buildGreeting(user?.name),
         actions: [
-          IconButton(
-            onPressed: () => context.push('/notifications'),
-            icon: const Icon(Icons.notifications_outlined),
-          ),
+          _NotificationBell(onTap: () => context.push('/notifications'), ref: ref),
           IconButton(
             onPressed: () => context.push('/conversations'),
             icon: const Icon(Icons.chat_bubble_outline_rounded),
@@ -40,6 +46,7 @@ class HomeScreen extends ConsumerWidget {
         ],
       ),
       body: RefreshIndicator(
+        color: AppColors.primary,
         onRefresh: () async {
           ref.invalidate(featuredVehiclesProvider);
           ref.invalidate(featuredPartsProvider);
@@ -186,6 +193,26 @@ class HomeScreen extends ConsumerWidget {
           Text('Hello, $name',
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w400, color: AppColors.textSecondary)),
       ],
+    );
+  }
+}
+
+class _NotificationBell extends StatelessWidget {
+  final VoidCallback onTap;
+  final WidgetRef ref;
+  const _NotificationBell({required this.onTap, required this.ref});
+
+  @override
+  Widget build(BuildContext context) {
+    final countAsync = ref.watch(unreadCountProvider);
+    final count = countAsync.valueOrNull ?? 0;
+    return IconButton(
+      onPressed: onTap,
+      icon: Badge(
+        isLabelVisible: count > 0,
+        label: Text(count > 99 ? '99+' : '$count'),
+        child: const Icon(Icons.notifications_outlined),
+      ),
     );
   }
 }

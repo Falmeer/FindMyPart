@@ -74,7 +74,7 @@ class SparePartCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'SAR ${part.price.toStringAsFixed(0)}',
+                    'BHD ${part.price.toStringAsFixed(0)}',
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w800,

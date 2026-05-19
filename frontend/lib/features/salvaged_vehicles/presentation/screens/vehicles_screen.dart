@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/services/reverb_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/services/car_api_service.dart';
 import '../../../../shared/widgets/empty_state.dart';
@@ -26,15 +28,28 @@ class _VehiclesScreenState extends ConsumerState<VehiclesScreen> {
   int? _yearTo;
   String? _condition;
 
+  Timer? _refreshTimer;
+  final _reverb = ReverbPublicChannel();
+
   @override
   void initState() {
     super.initState();
     _search = widget.initialSearch?.isNotEmpty == true ? widget.initialSearch : null;
     _searchController = TextEditingController(text: _search ?? '');
+    _refreshTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      ref.invalidate(vehiclesListProvider);
+    });
+    _reverb.connect(
+      channelName: 'vehicles',
+      eventName: 'VehicleListed',
+      onEvent: (_) => ref.invalidate(vehiclesListProvider),
+    );
   }
 
   @override
   void dispose() {
+    _refreshTimer?.cancel();
+    _reverb.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -174,8 +189,9 @@ class _VehiclesScreenState extends ConsumerState<VehiclesScreen> {
     final parts = <String>[];
     if (_brand != null) parts.add(_brand!);
     if (_model != null) parts.add(_model!);
-    if (_yearFrom != null && _yearTo != null) parts.add('$_yearFrom–$_yearTo');
-    else if (_yearFrom != null) parts.add('From $_yearFrom');
+    if (_yearFrom != null && _yearTo != null) {
+      parts.add('$_yearFrom–$_yearTo');
+    } else if (_yearFrom != null) parts.add('From $_yearFrom');
     else if (_yearTo != null) parts.add('Up to $_yearTo');
     if (_condition != null) parts.add(_condition!);
     return parts.join(' · ');

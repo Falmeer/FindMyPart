@@ -4,15 +4,14 @@ class AppConstants {
   static const String appName = 'FindMyPart';
   static const String appVersion = '1.0.0';
 
-  // API
   static const String baseUrl = 'http://localhost:8000/api/v1';
   static const Duration connectTimeout = Duration(seconds: 30);
   static const Duration receiveTimeout = Duration(seconds: 30);
 
   // Reverb / WebSocket
-  static const String reverbKey    = 'aeusmpjdjjk62m1oi14d';
-  static const String reverbHost   = 'localhost';
-  static const int    reverbPort   = 8080;
+  static const String reverbKey  = 'aeusmpjdjjk62m1oi14d';
+  static const String reverbHost = 'localhost';
+  static const int    reverbPort = 8080;
 
   // Storage keys
   static const String tokenKey = 'auth_token';

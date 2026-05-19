@@ -55,8 +55,6 @@ class _OpenIssueCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final alreadySent = issue.myOffer != null;
-
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -64,9 +62,7 @@ class _OpenIssueCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: alreadySent ? AppColors.primary.withValues(alpha: 0.4) : AppColors.border,
-          ),
+          border: Border.all(color: AppColors.border),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -81,18 +77,6 @@ class _OpenIssueCard extends StatelessWidget {
                     style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                   ),
                 ),
-                if (alreadySent)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryLight,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
-                      'Offer Sent',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.primary),
-                    ),
-                  ),
               ],
             ),
             const SizedBox(height: 8),
@@ -108,14 +92,14 @@ class _OpenIssueCard extends StatelessWidget {
                 const Icon(Icons.person_outline, size: 14, color: AppColors.textSecondary),
                 const SizedBox(width: 4),
                 Text(
-                  issue.userName ?? 'Customer',
+                  issue.userName ?? 'Anonymous',
                   style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
                 ),
                 const SizedBox(width: 12),
-                const Icon(Icons.local_offer_outlined, size: 14, color: AppColors.accent),
+                const Icon(Icons.chat_bubble_outline, size: 14, color: AppColors.accent),
                 const SizedBox(width: 4),
                 Text(
-                  '${issue.offerCount} offer${issue.offerCount == 1 ? '' : 's'}',
+                  '${issue.commentCount} comment${issue.commentCount == 1 ? '' : 's'}',
                   style: const TextStyle(fontSize: 12, color: AppColors.accent),
                 ),
                 const Spacer(),

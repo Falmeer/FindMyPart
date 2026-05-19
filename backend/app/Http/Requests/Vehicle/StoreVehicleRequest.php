@@ -19,7 +19,7 @@ class StoreVehicleRequest extends FormRequest
             'mileage' => 'nullable|integer|min:0',
             'condition' => 'required|in:Used,Damaged,Parts Only',
             'vin' => 'nullable|string|size:17',
-            'description' => 'required|string|min:10',
+            'description' => 'nullable|string',
             'price' => 'nullable|numeric|min:0',
             'images' => 'nullable|array|max:10',
             'images.*' => 'image|mimes:jpeg,jpg,png,webp|max:5120',

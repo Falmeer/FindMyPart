@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/models/share_card.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/contact_button.dart';
 import '../../../../shared/widgets/favorite_button.dart';
@@ -99,6 +100,15 @@ class VehicleDetailScreen extends ConsumerWidget {
                   recipientId: vehicle.sellerId,
                   recipientName: vehicle.sellerName,
                   expanded: false,
+                  shareCard: ShareCard(
+                    kind: 'vehicle',
+                    id: vehicle.id,
+                    title: vehicle.title,
+                    subtitle: vehicle.price != null
+                        ? 'BD ${vehicle.price!.toStringAsFixed(0)} · ${vehicle.condition}'
+                        : vehicle.condition,
+                    imageUrl: vehicle.thumbnailUrl,
+                  ),
                 ),
               ),
             ],

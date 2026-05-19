@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API\V1;
 
+use App\Events\PartListed;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SparePart\StoreSparePartRequest;
 use App\Http\Resources\SparePart\SparePartResource;
@@ -57,13 +58,15 @@ class SparePartController extends Controller
                 SparePartImage::create([
                     'spare_part_id' => $part->id,
                     'path' => $path,
-                    'url' => Storage::url($path),
+                    'url' => url('api/v1/files/' . $path),
                     'is_primary' => $index === 0,
                 ]);
             }
         }
 
         $part->load(['images', 'user', 'category']);
+
+        PartListed::dispatch($part->id);
 
         return response()->json([
             'success' => true,

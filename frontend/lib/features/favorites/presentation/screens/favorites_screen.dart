@@ -67,6 +67,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
                     subtitle: 'Tap the heart on any vehicle to save it here',
                   )
                 : RefreshIndicator(
+                    color: AppColors.primary,
                     onRefresh: () async => ref.invalidate(favoriteVehiclesProvider),
                     child: GridView.builder(
                       padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
@@ -96,6 +97,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
                     subtitle: 'Tap the heart on any part to save it here',
                   )
                 : RefreshIndicator(
+                    color: AppColors.primary,
                     onRefresh: () async => ref.invalidate(favoritePartsProvider),
                     child: GridView.builder(
                       padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
@@ -125,6 +127,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
                     subtitle: 'Tap the heart on any garage to save it here',
                   )
                 : RefreshIndicator(
+                    color: AppColors.primary,
                     onRefresh: () async => ref.invalidate(favoriteGaragesProvider),
                     child: ListView.separated(
                       padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
@@ -149,6 +152,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
                     subtitle: 'Tap the heart on any scrapyard to save it here',
                   )
                 : RefreshIndicator(
+                    color: AppColors.primary,
                     onRefresh: () async => ref.invalidate(favoriteScrapyardsProvider),
                     child: ListView.separated(
                       padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),

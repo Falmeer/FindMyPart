@@ -24,6 +24,7 @@ class ConversationsScreen extends ConsumerWidget {
                 subtitle: 'Contact a seller or garage to start chatting',
               )
             : RefreshIndicator(
+                color: AppColors.primary,
                 onRefresh: () async => ref.invalidate(conversationsProvider),
                 child: ListView.separated(
                   itemCount: conversations.length,

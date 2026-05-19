@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/models/share_card.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/auth/presentation/screens/forgot_password_screen.dart';
@@ -29,6 +30,7 @@ import '../../features/issues/presentation/screens/open_issues_screen.dart';
 import '../../features/issues/presentation/screens/issue_detail_screen.dart';
 import '../../features/issues/presentation/screens/issues_feed_screen.dart';
 import '../../features/ai_detection/presentation/screens/warning_light_screen.dart';
+import '../../features/ai_detection/presentation/screens/ai_chatbot_screen.dart';
 import '../../features/phone_verification/presentation/screens/phone_verification_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -39,21 +41,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       final location = state.matchedLocation;
       final onSplash = location == '/splash';
 
-      if (authState.isLoading) return onSplash ? null : '/splash';
+      if (authState.isLoading) return null;
 
       final isLoggedIn = authState.value != null;
       final isAuthRoute = location.startsWith('/auth');
 
-      if (onSplash) return isLoggedIn ? '/' : '/';
+      if (onSplash) return isLoggedIn ? '/' : '/auth/login';
       if (isLoggedIn && isAuthRoute) return '/';
 
-      // Phone verification hard gate
-      final onVerify = location == '/phone-verify';
-      if (isLoggedIn && authState.value?.phoneVerified == false && !onVerify) {
-        return '/phone-verify';
-      }
-      if (isLoggedIn && authState.value?.phoneVerified == true && onVerify) {
-        return '/';
+      // Must-change-password gate (admin-created business accounts, first login)
+      final onChangePass = location == '/profile/change-password';
+      if (isLoggedIn && authState.value?.mustChangePassword == true && !onChangePass) {
+        return '/profile/change-password';
       }
 
       // Routes that require authentication
@@ -146,6 +145,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (c, s) => ChatScreen(
           conversationId: int.parse(s.pathParameters['id']!),
           participantName: s.uri.queryParameters['name'] ?? 'Chat',
+          pendingCard: s.extra as ShareCard?,
         ),
       ),
       GoRoute(
@@ -171,6 +171,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/ai-scan',
         builder: (c, s) => const WarningLightScreen(),
+      ),
+      GoRoute(
+        path: '/ai-chatbot',
+        builder: (c, s) => const AiChatbotScreen(),
       ),
       GoRoute(
         path: '/auth/login',

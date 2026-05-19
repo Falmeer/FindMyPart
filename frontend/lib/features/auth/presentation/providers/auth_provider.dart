@@ -11,7 +11,14 @@ final devOtpCodeProvider = StateProvider<String?>((ref) => null);
 class AuthNotifier extends AsyncNotifier<UserModel?> {
   @override
   Future<UserModel?> build() async {
-    return ref.read(authRepositoryProvider).getStoredUser();
+    try {
+      return await ref
+          .read(authRepositoryProvider)
+          .getStoredUser()
+          .timeout(const Duration(seconds: 5), onTimeout: () => null);
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> login(String email, String password) async {
@@ -56,10 +63,11 @@ class AuthNotifier extends AsyncNotifier<UserModel?> {
     required String currentPassword,
     required String newPassword,
   }) async {
-    await ref.read(authRepositoryProvider).changePassword(
+    final user = await ref.read(authRepositoryProvider).changePassword(
           currentPassword: currentPassword,
           newPassword: newPassword,
         );
+    state = AsyncData(user);
   }
 
   Future<void> sendOtp({String? newPhone}) async {

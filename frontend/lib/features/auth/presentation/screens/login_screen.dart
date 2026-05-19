@@ -119,11 +119,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   keyboardType: TextInputType.phone,
                   onChanged: (phone) {
                     _completePhone = phone.completeNumber;
-                    _phoneValid = phone.isValidNumber();
+                    try {
+                      _phoneValid = phone.isValidNumber();
+                    } catch (_) {
+                      _phoneValid = false;
+                    }
                   },
                   validator: (phone) {
                     if (phone == null || phone.number.isEmpty) return 'Phone number is required';
-                    if (!phone.isValidNumber()) return 'Enter a valid phone number';
                     return null;
                   },
                   invalidNumberMessage: 'Invalid phone number',
@@ -166,6 +169,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => context.go('/'),
+                    icon: const Icon(Icons.explore_outlined, size: 18),
+                    label: const Text('Browse as Guest'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.textSecondary,
+                      side: const BorderSide(color: AppColors.border),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
                 ),
               ],
             ),

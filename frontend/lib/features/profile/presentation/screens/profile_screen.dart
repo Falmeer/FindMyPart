@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import 'help_faq_screen.dart';
+import 'privacy_policy_screen.dart';
+import 'about_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -44,9 +47,9 @@ class ProfileScreen extends ConsumerWidget {
           _SectionCard(
             title: 'Support',
             tiles: [
-              _Tile(Icons.help_outline, 'Help & FAQ', () {}),
-              _Tile(Icons.privacy_tip_outlined, 'Privacy Policy', () {}),
-              _Tile(Icons.info_outline, 'About FindMyPart', () {}),
+              _Tile(Icons.help_outline, 'Help & FAQ', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpFaqScreen()))),
+              _Tile(Icons.privacy_tip_outlined, 'Privacy Policy', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()))),
+              _Tile(Icons.info_outline, 'About FindMyPart', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutScreen()))),
             ],
           ),
           const SizedBox(height: 24),

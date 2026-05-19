@@ -13,7 +13,8 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
     protected $fillable = [
-        'name', 'email', 'phone', 'phone_verified_at', 'password', 'avatar', 'role', 'is_active', 'fcm_token',
+        'name', 'email', 'phone', 'phone_verified_at', 'password', 'avatar', 'role',
+        'is_active', 'must_change_password', 'fcm_token', 'is_banned', 'banned_reason', 'banned_at',
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -21,8 +22,11 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at'  => 'datetime',
         'phone_verified_at'  => 'datetime',
+        'banned_at'          => 'datetime',
         'password'           => 'hashed',
-        'is_active'          => 'boolean',
+        'is_active'            => 'boolean',
+        'must_change_password' => 'boolean',
+        'is_banned'            => 'boolean',
     ];
 
     public function garage()

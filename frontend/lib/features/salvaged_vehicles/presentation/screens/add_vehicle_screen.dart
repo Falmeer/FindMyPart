@@ -202,10 +202,9 @@ class _AddVehicleScreenState extends ConsumerState<AddVehicleScreen> {
                 ),
                 const SizedBox(height: 14),
                 AppTextField(
-                  label: 'Description',
+                  label: 'Description (optional)',
                   controller: _descController,
                   maxLines: 4,
-                  validator: (v) => v?.isEmpty == true ? 'Required' : null,
                 ),
                 const SizedBox(height: 32),
                 AppButton(

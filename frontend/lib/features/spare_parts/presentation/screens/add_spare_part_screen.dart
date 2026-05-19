@@ -63,7 +63,7 @@ class _AddSparePartScreenState extends ConsumerState<AddSparePartScreen> {
                 const SizedBox(height: 14),
                 ref.watch(categoriesProvider).when(
                   data: (cats) => DropdownButtonFormField<int>(
-                    value: _categoryId,
+                    initialValue: _categoryId,
                     decoration: const InputDecoration(labelText: 'Category'),
                     hint: const Text('Select category'),
                     items: cats
@@ -89,7 +89,7 @@ class _AddSparePartScreenState extends ConsumerState<AddSparePartScreen> {
                   children: [
                     Expanded(
                       child: AppTextField(
-                        label: 'Price (SAR)',
+                        label: 'Price (BHD)',
                         controller: _priceController,
                         keyboardType: TextInputType.number,
                         validator: (v) => v?.isEmpty == true ? 'Required' : null,
@@ -112,10 +112,9 @@ class _AddSparePartScreenState extends ConsumerState<AddSparePartScreen> {
                 ),
                 const SizedBox(height: 14),
                 AppTextField(
-                  label: 'Description',
+                  label: 'Description (optional)',
                   controller: _descController,
                   maxLines: 4,
-                  validator: (v) => v?.isEmpty == true ? 'Required' : null,
                 ),
                 const SizedBox(height: 14),
                 SwitchListTile(

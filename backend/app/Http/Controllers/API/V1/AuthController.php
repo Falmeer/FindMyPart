@@ -143,11 +143,15 @@ class AuthController extends Controller
             ], 422);
         }
 
-        $user->update(['password' => Hash::make($validated['password'])]);
+        $user->update([
+            'password'             => Hash::make($validated['password']),
+            'must_change_password' => false,
+        ]);
 
         return response()->json([
             'success' => true,
             'message' => 'Password changed successfully',
+            'data'    => ['user' => new UserResource($user)],
         ]);
     }
 

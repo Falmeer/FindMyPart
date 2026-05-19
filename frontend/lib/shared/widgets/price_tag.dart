@@ -11,7 +11,7 @@ class PriceTag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = price != null
-        ? 'SAR ${price!.toStringAsFixed(0)}'
+        ? 'BHD ${price!.toStringAsFixed(0)}'
         : (label ?? 'Contact for price');
 
     return Text(

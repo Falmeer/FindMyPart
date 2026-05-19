@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/models/share_card.dart';
 import '../../core/theme/app_colors.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../features/chat/data/repositories/chat_repository.dart';
@@ -9,12 +10,14 @@ class ContactButton extends ConsumerStatefulWidget {
   final int recipientId;
   final String recipientName;
   final bool expanded;
+  final ShareCard? shareCard;
 
   const ContactButton({
     super.key,
     required this.recipientId,
     required this.recipientName,
     this.expanded = true,
+    this.shareCard,
   });
 
   @override
@@ -32,20 +35,19 @@ class _ContactButtonState extends ConsumerState<ContactButton> {
     }
     setState(() => _loading = true);
     try {
-      final chatId = await ref
-          .read(chatRepositoryProvider)
-          .findOrCreateChat(widget.recipientId);
+      final repo = ref.read(chatRepositoryProvider);
+      final chatId = await repo.findOrCreateChat(widget.recipientId);
+
       if (mounted) {
         context.push(
           '/conversations/$chatId?name=${Uri.encodeComponent(widget.recipientName)}',
+          extra: widget.shareCard,
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(e.toString()),
-              backgroundColor: AppColors.error),
+          SnackBar(content: Text(e.toString()), backgroundColor: AppColors.error),
         );
       }
     } finally {

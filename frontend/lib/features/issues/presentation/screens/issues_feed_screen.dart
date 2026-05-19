@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/services/reverb_service.dart';
+
 import '../../../../core/theme/app_colors.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/shimmer_card.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../data/models/issue_model.dart';
 import '../../providers/issues_provider.dart';
 
@@ -20,9 +23,33 @@ class _IssuesFeedScreenState extends ConsumerState<IssuesFeedScreen> {
   String _search = '';
   String? _selectedBrand;
   bool _myIssuesOnly = false;
+  Timer? _refreshTimer;
+  final _reverb = ReverbPublicChannel();
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      if (_myIssuesOnly) {
+        ref.invalidate(myIssuesProvider);
+      } else {
+        ref.invalidate(openIssuesProvider);
+      }
+    });
+    _reverb.connect(
+      channelName: 'issues',
+      eventName: 'IssuePosted',
+      onEvent: (_) {
+        ref.invalidate(openIssuesProvider);
+        ref.invalidate(myIssuesProvider);
+      },
+    );
+  }
 
   @override
   void dispose() {
+    _refreshTimer?.cancel();
+    _reverb.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -47,38 +74,42 @@ class _IssuesFeedScreenState extends ConsumerState<IssuesFeedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(currentUserProvider);
-    final isCustomer = user?.isCustomer == true;
-
+    final isLoggedIn = ref.watch(currentUserProvider) != null;
+    final effectiveMyIssues = _myIssuesOnly && isLoggedIn;
     final issuesAsync =
-        _myIssuesOnly ? ref.watch(myIssuesProvider) : ref.watch(openIssuesProvider);
+        effectiveMyIssues ? ref.watch(myIssuesProvider) : ref.watch(openIssuesProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Issues'),
         actions: [
-          if (isCustomer)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: TextButton.icon(
-                onPressed: () => setState(() => _myIssuesOnly = !_myIssuesOnly),
-                icon: Icon(
-                  _myIssuesOnly ? Icons.person_rounded : Icons.people_outline,
-                  size: 18,
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: TextButton.icon(
+              onPressed: () {
+                if (!isLoggedIn) {
+                  context.push('/auth/login');
+                  return;
+                }
+                setState(() => _myIssuesOnly = !_myIssuesOnly);
+              },
+              icon: Icon(
+                _myIssuesOnly ? Icons.person_rounded : Icons.people_outline,
+                size: 18,
+                color: _myIssuesOnly ? AppColors.primary : AppColors.textSecondary,
+              ),
+              label: Text(
+                _myIssuesOnly ? 'Mine' : 'All',
+                style: TextStyle(
                   color: _myIssuesOnly ? AppColors.primary : AppColors.textSecondary,
-                ),
-                label: Text(
-                  _myIssuesOnly ? 'Mine' : 'All',
-                  style: TextStyle(
-                    color: _myIssuesOnly ? AppColors.primary : AppColors.textSecondary,
-                    fontSize: 13,
-                  ),
+                  fontSize: 13,
                 ),
               ),
             ),
+          ),
         ],
       ),
-      floatingActionButton: isCustomer
+      floatingActionButton: isLoggedIn
           ? FloatingActionButton.extended(
               onPressed: () => context.push('/garages/post-issue'),
               backgroundColor: AppColors.primary,
@@ -153,15 +184,16 @@ class _IssuesFeedScreenState extends ConsumerState<IssuesFeedScreen> {
                 if (filtered.isEmpty) {
                   return EmptyState(
                     icon: Icons.forum_outlined,
-                    title: _myIssuesOnly ? 'No issues posted yet' : 'No open issues',
-                    subtitle: _myIssuesOnly
+                    title: effectiveMyIssues ? 'No issues posted yet' : 'No open issues',
+                    subtitle: effectiveMyIssues
                         ? 'Tap "Post Issue" to describe your car problem'
                         : 'Check back later or adjust your filter',
                   );
                 }
                 return RefreshIndicator(
+                  color: AppColors.primary,
                   onRefresh: () async {
-                    if (_myIssuesOnly) {
+                    if (effectiveMyIssues) {
                       ref.invalidate(myIssuesProvider);
                     } else {
                       ref.invalidate(openIssuesProvider);
@@ -270,7 +302,7 @@ class _IssueCard extends StatelessWidget {
                       size: 14, color: AppColors.textTertiary),
                   const SizedBox(width: 4),
                   Text(
-                    '${issue.offerCount} ${issue.offerCount == 1 ? 'offer' : 'offers'}',
+                    '${issue.commentCount} ${issue.commentCount == 1 ? 'comment' : 'comments'}',
                     style:
                         const TextStyle(fontSize: 12, color: AppColors.textTertiary),
                   ),

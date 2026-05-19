@@ -51,5 +51,12 @@
 	<string>FindMyPart needs access to your camera to take photos for listings.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>FindMyPart needs microphone access for video recording.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>FindMyPart needs local network access to connect to the development server.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
 </dict>
 </plist>

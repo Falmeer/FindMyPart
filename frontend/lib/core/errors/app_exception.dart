@@ -27,6 +27,6 @@ class ValidationException extends AppException {
 }
 
 class ServerException extends AppException {
-  const ServerException([String message = 'Server error. Please try again.'])
-      : super(message, statusCode: 500);
+  const ServerException([super.message = 'Server error. Please try again.'])
+      : super(statusCode: 500);
 }

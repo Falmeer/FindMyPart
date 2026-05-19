@@ -140,6 +140,9 @@ class AppTheme {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           side: const BorderSide(color: AppColors.border),
         ),
+        progressIndicatorTheme: const ProgressIndicatorThemeData(
+          color: AppColors.primary,
+        ),
         dividerTheme: const DividerThemeData(
           color: AppColors.borderLight,
           thickness: 1,
@@ -204,6 +207,9 @@ class AppTheme {
             borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
           ),
           hintStyle: const TextStyle(color: AppColors.textSecondaryDark, fontSize: 14),
+        ),
+        progressIndicatorTheme: const ProgressIndicatorThemeData(
+          color: AppColors.primary,
         ),
         textTheme: _textTheme(AppColors.textPrimaryDark, AppColors.textSecondaryDark),
       );

@@ -28,4 +28,9 @@ class VehicleIssue extends Model
     {
         return $this->hasMany(GarageOffer::class);
     }
+
+    public function comments()
+    {
+        return $this->hasMany(IssueComment::class)->latest();
+    }
 }

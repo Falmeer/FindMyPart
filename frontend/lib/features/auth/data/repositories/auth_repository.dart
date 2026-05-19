@@ -73,15 +73,22 @@ class AuthRepository {
     return user;
   }
 
-  Future<void> changePassword({
+  Future<UserModel> changePassword({
     required String currentPassword,
     required String newPassword,
   }) async {
-    await _client.put('/auth/password', data: {
+    final response = await _client.put('/auth/password', data: {
       'current_password': currentPassword,
       'password': newPassword,
       'password_confirmation': newPassword,
     });
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(AppConstants.tokenKey);
+    final user = UserModel.fromJson(
+      response.data['data']['user'] as Map<String, dynamic>,
+    ).copyWith(token: token);
+    await _persistSession(user);
+    return user;
   }
 
   Future<void> forgotPassword(String email) async {

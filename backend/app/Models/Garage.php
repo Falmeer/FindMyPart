@@ -14,6 +14,7 @@ class Garage extends Model
         'user_id', 'name', 'description', 'phone', 'address',
         'latitude', 'longitude', 'services', 'working_hours',
         'rating', 'review_count', 'is_verified', 'is_active',
+        'status', 'admin_notes',
     ];
 
     protected $casts = [

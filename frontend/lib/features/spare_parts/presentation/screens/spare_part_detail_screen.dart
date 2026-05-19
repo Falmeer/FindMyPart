@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/models/share_card.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/contact_button.dart';
 import '../../../../shared/widgets/favorite_button.dart';
@@ -57,7 +58,7 @@ class SparePartDetailScreen extends ConsumerWidget {
                     Row(
                       children: [
                         Text(
-                          'SAR ${part.price.toStringAsFixed(0)}',
+                          'BHD ${part.price.toStringAsFixed(0)}',
                           style: const TextStyle(
                               fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.primary),
                         ),
@@ -115,6 +116,13 @@ class SparePartDetailScreen extends ConsumerWidget {
                   recipientId: part.sellerId,
                   recipientName: part.sellerName,
                   expanded: false,
+                  shareCard: ShareCard(
+                    kind: 'part',
+                    id: part.id,
+                    title: part.name,
+                    subtitle: 'BD ${part.price.toStringAsFixed(0)} · ${part.condition}',
+                    imageUrl: part.thumbnailUrl,
+                  ),
                 ),
               ),
             ],

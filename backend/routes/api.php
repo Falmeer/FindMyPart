@@ -11,7 +11,9 @@ use App\Http\Controllers\API\V1\FavoriteController;
 use App\Http\Controllers\API\V1\ReviewController;
 use App\Http\Controllers\API\V1\AIController;
 use App\Http\Controllers\API\V1\ChatController;
+use App\Http\Controllers\API\V1\NotificationController;
 use App\Http\Controllers\API\V1\PhoneVerificationController;
+use App\Http\Controllers\API\V1\StorageController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -43,8 +45,16 @@ Route::prefix('v1')->group(function () {
     Route::get('scrapyards/{scrapyard}', [ScrapyardController::class, 'show']);
     Route::get('scrapyards/{scrapyard}/reviews', [ScrapyardReviewController::class, 'index']);
 
+    // ─── Public Issues (read-only) ────────────────────────────────────────────
+    Route::get('vehicle-issues/open', [VehicleIssueController::class, 'openIssues']);
+    Route::get('vehicle-issues/{vehicleIssue}', [VehicleIssueController::class, 'show']);
+    Route::get('vehicle-issues/{vehicleIssue}/comments', [VehicleIssueController::class, 'getComments']);
+
     // ─── Public AI Route ──────────────────────────────────────────────────────
     Route::post('ai/warning-light', [AIController::class, 'analyzeWarningLight']);
+
+    // ─── Storage file proxy (serves public-disk files with CORS headers) ──────
+    Route::get('files/{path}', [StorageController::class, 'serve'])->where('path', '.*');
 
     // ─── Authenticated Routes ─────────────────────────────────────────────────
     Route::middleware('auth:sanctum')->group(function () {
@@ -74,13 +84,10 @@ Route::prefix('v1')->group(function () {
         Route::post('scrapyards', [ScrapyardController::class, 'store']);
         Route::post('scrapyards/{scrapyard}/reviews', [ScrapyardReviewController::class, 'store']);
 
-        // Vehicle Issues
+        // Vehicle Issues (write operations only — reads are public above)
         Route::get('vehicle-issues', [VehicleIssueController::class, 'index']);
         Route::post('vehicle-issues', [VehicleIssueController::class, 'store']);
-        Route::get('vehicle-issues/open', [VehicleIssueController::class, 'openIssues']);
-        Route::get('vehicle-issues/{vehicleIssue}', [VehicleIssueController::class, 'show']);
-        Route::post('vehicle-issues/{vehicleIssue}/offers', [VehicleIssueController::class, 'storeOffer']);
-        Route::patch('vehicle-issues/{vehicleIssue}/offers/{offer}', [VehicleIssueController::class, 'updateOffer']);
+        Route::post('vehicle-issues/{vehicleIssue}/comments', [VehicleIssueController::class, 'storeComment']);
 
         // Favorites
         Route::get('favorites', [FavoriteController::class, 'index']);
@@ -88,6 +95,12 @@ Route::prefix('v1')->group(function () {
 
         // Reviews
         Route::post('garages/{garage}/reviews', [ReviewController::class, 'store']);
+
+        // Notifications
+        Route::get('notifications', [NotificationController::class, 'index']);
+        Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount']);
+        Route::post('notifications/{id}/read', [NotificationController::class, 'markRead']);
+        Route::post('notifications/read-all', [NotificationController::class, 'markAllRead']);
 
         // Chat
         Route::get('conversations', [ChatController::class, 'conversations']);

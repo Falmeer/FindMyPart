@@ -16,7 +16,7 @@ class StoreSparePartRequest extends FormRequest
             'condition' => 'required|in:New,Used,Refurbished',
             'price' => 'required|numeric|min:0',
             'quantity' => 'nullable|integer|min:1',
-            'description' => 'required|string|min:10',
+            'description' => 'nullable|string',
             'compatibility' => 'nullable|string|max:255',
             'has_warranty' => 'nullable|boolean',
             'images' => 'nullable|array|max:10',

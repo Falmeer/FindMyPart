@@ -11,13 +11,13 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        // Admin
-        User::firstOrCreate(
+        // Admin (web dashboard only — email login)
+        User::updateOrCreate(
             ['email' => 'admin@findmypart.com'],
             [
-                'name' => 'Admin',
-                'password' => Hash::make('password'),
-                'role' => 'admin',
+                'name'      => 'Admin',
+                'password'  => Hash::make('FMP#3003'),
+                'role'      => 'admin',
                 'is_active' => true,
             ]
         );

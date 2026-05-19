@@ -46,7 +46,7 @@ class _AuthInterceptor extends Interceptor {
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString(AppConstants.tokenKey);
-    if (token != null) {
+    if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
     }
     handler.next(options);
@@ -56,23 +56,25 @@ class _AuthInterceptor extends Interceptor {
 class _ErrorInterceptor extends Interceptor {
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
+    AppException appEx;
+
     switch (err.type) {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.receiveTimeout:
       case DioExceptionType.sendTimeout:
-        throw const NetworkException('Connection timed out. Check your internet.');
+        appEx = const NetworkException('Connection timed out. Check your internet.');
       case DioExceptionType.connectionError:
-        throw const NetworkException('No internet connection.');
+        appEx = const NetworkException('No internet connection.');
       default:
         final statusCode = err.response?.statusCode;
         final data = err.response?.data;
-        final message = data is Map ? data['message'] ?? 'Something went wrong' : 'Something went wrong';
+        final msg = data is Map ? (data['message'] ?? 'Something went wrong').toString() : 'Something went wrong';
 
         switch (statusCode) {
           case 401:
-            throw const UnauthorizedException();
+            appEx = const UnauthorizedException();
           case 404:
-            throw NotFoundException(message.toString());
+            appEx = NotFoundException(msg);
           case 422:
             final errors = <String, List<String>>{};
             if (data is Map && data['errors'] is Map) {
@@ -80,12 +82,20 @@ class _ErrorInterceptor extends Interceptor {
                 errors[k.toString()] = (v as List).map((e) => e.toString()).toList();
               });
             }
-            throw ValidationException(message.toString(), errors);
+            appEx = ValidationException(msg, errors);
           case 500:
-            throw const ServerException();
+            appEx = const ServerException();
           default:
-            throw NetworkException(message.toString(), statusCode: statusCode);
+            appEx = NetworkException(msg, statusCode: statusCode);
         }
     }
+
+    handler.reject(DioException(
+      requestOptions: err.requestOptions,
+      response: err.response,
+      type: err.type,
+      message: appEx.message,
+      error: appEx,
+    ));
   }
 }

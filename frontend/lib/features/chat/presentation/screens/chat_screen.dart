@@ -5,17 +5,23 @@ import 'package:dart_pusher_channels/dart_pusher_channels.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/models/share_card.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../data/models/conversation_model.dart';
 import '../../data/repositories/chat_repository.dart';
 
+// Polling interval when WebSocket is not connected
+const _kPollInterval = Duration(seconds: 2);
+
 class ChatScreen extends ConsumerStatefulWidget {
   final int conversationId;
   final String participantName;
-  const ChatScreen({super.key, required this.conversationId, this.participantName = 'Chat'});
+  final ShareCard? pendingCard;
+  const ChatScreen({super.key, required this.conversationId, this.participantName = 'Chat', this.pendingCard});
 
   @override
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
@@ -29,20 +35,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   PrivateChannel? _channel;
   StreamSubscription? _connectionSub;
   StreamSubscription? _eventSub;
+  Timer? _pollTimer;
 
   List<MessageModel> _messages = [];
   bool _initialLoading = true;
   bool _sending = false;
   bool _connected = false;
+  int _lastMessageId = 0;
+  ShareCard? _pendingCard;
 
   @override
   void initState() {
     super.initState();
+    _pendingCard = widget.pendingCard;
     _loadInitialAndConnect();
   }
 
   @override
   void dispose() {
+    _pollTimer?.cancel();
     _eventSub?.cancel();
     _connectionSub?.cancel();
     _channel?.unsubscribe();
@@ -61,12 +72,34 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       setState(() {
         _messages = messages;
         _initialLoading = false;
+        if (messages.isNotEmpty) _lastMessageId = messages.last.id;
       });
       _scrollToBottom(jump: true);
     } catch (_) {
       if (mounted) setState(() => _initialLoading = false);
     }
     _connectReverb();
+    _startPolling();
+  }
+
+  void _startPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(_kPollInterval, (_) => _poll());
+  }
+
+  Future<void> _poll() async {
+    if (!mounted) return;
+    try {
+      final newMessages = await ref
+          .read(chatRepositoryProvider)
+          .getMessages(widget.conversationId, afterId: _lastMessageId);
+      if (!mounted || newMessages.isEmpty) return;
+      setState(() {
+        _messages.addAll(newMessages);
+        _lastMessageId = newMessages.last.id;
+      });
+      _scrollToBottom();
+    } catch (_) {}
   }
 
   void _connectReverb() async {
@@ -128,7 +161,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
 
     if (mounted) {
-      setState(() => _messages.add(msg));
+      setState(() {
+        _messages.add(msg);
+        if (msg.id > _lastMessageId) _lastMessageId = msg.id;
+      });
       _scrollToBottom();
     }
   }
@@ -161,12 +197,42 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           .sendMessage(widget.conversationId,
               body: text, imageBytes: imageBytes, imageName: imageName);
       if (mounted) {
-        setState(() => _messages.add(message));
+        setState(() {
+          _messages.add(message);
+          if (message.id > _lastMessageId) _lastMessageId = message.id;
+        });
         _scrollToBottom();
       }
     } catch (e) {
       if (mounted) {
         if (text.isNotEmpty) _messageController.text = text;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: AppColors.error),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  Future<void> _sendPendingCard() async {
+    final card = _pendingCard;
+    if (card == null || _sending) return;
+    setState(() => _sending = true);
+    try {
+      final message = await ref
+          .read(chatRepositoryProvider)
+          .sendMessage(widget.conversationId, body: card.toMessageBody());
+      if (mounted) {
+        setState(() {
+          _pendingCard = null;
+          _messages.add(message);
+          if (message.id > _lastMessageId) _lastMessageId = message.id;
+        });
+        _scrollToBottom();
+      }
+    } catch (e) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(e.toString()), backgroundColor: AppColors.error),
         );
@@ -249,6 +315,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         },
                       ),
           ),
+          if (_pendingCard != null)
+            _PendingCardPreview(
+              card: _pendingCard!,
+              sending: _sending,
+              onDismiss: () => setState(() => _pendingCard = null),
+              onSend: _sendPendingCard,
+            ),
           _MessageInput(
             controller: _messageController,
             onSend: () => _send(),
@@ -264,6 +337,94 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       a.year == b.year && a.month == b.month && a.day == b.day;
 }
 
+class _PendingCardPreview extends StatelessWidget {
+  final ShareCard card;
+  final bool sending;
+  final VoidCallback onDismiss;
+  final VoidCallback onSend;
+
+  const _PendingCardPreview({
+    required this.card,
+    required this.sending,
+    required this.onDismiss,
+    required this.onSend,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+      decoration: const BoxDecoration(
+        color: AppColors.primaryLight,
+        border: Border(
+          top: BorderSide(color: AppColors.border),
+          bottom: BorderSide(color: AppColors.border),
+        ),
+      ),
+      child: Row(
+        children: [
+          if (card.imageUrl != null)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                card.imageUrl!,
+                width: 48,
+                height: 48,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              ),
+            ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(card.kindLabel,
+                    style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                        letterSpacing: 0.4)),
+                Text(card.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                Text(card.subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+              ],
+            ),
+          ),
+          const SizedBox(width: 4),
+          IconButton(
+            onPressed: sending ? null : onDismiss,
+            icon: const Icon(Icons.close, size: 18, color: AppColors.textSecondary),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          ),
+          const SizedBox(width: 4),
+          FilledButton(
+            onPressed: sending ? null : onSend,
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: sending
+                ? const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : const Text('Send', style: TextStyle(fontSize: 13)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _MessageBubble extends StatelessWidget {
   final MessageModel message;
   final bool isMine;
@@ -271,6 +432,15 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final shareCard = ShareCard.tryParse(message.body);
+    if (shareCard != null) {
+      return _ShareCardBubble(
+        card: shareCard,
+        isMine: isMine,
+        time: _formatTime(message.createdAt),
+      );
+    }
+
     final hasImage = message.attachmentUrl != null;
     final hasText = message.body.isNotEmpty;
 
@@ -328,12 +498,7 @@ class _MessageBubble extends StatelessWidget {
                   ),
                 ),
               Padding(
-                padding: EdgeInsets.fromLTRB(
-                  12,
-                  hasImage ? 6 : 10,
-                  12,
-                  10,
-                ),
+                padding: EdgeInsets.fromLTRB(12, hasImage ? 6 : 10, 12, 10),
                 child: Column(
                   crossAxisAlignment:
                       isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
@@ -370,6 +535,136 @@ class _MessageBubble extends StatelessWidget {
     final h = dt.hour.toString().padLeft(2, '0');
     final m = dt.minute.toString().padLeft(2, '0');
     return '$h:$m';
+  }
+}
+
+class _ShareCardBubble extends StatelessWidget {
+  final ShareCard card;
+  final bool isMine;
+  final String time;
+
+  const _ShareCardBubble({
+    required this.card,
+    required this.isMine,
+    required this.time,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final icons = {
+      'vehicle': Icons.directions_car_outlined,
+      'part': Icons.build_outlined,
+      'issue': Icons.report_problem_outlined,
+    };
+    final icon = icons[card.kind] ?? Icons.link;
+
+    return Align(
+      alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
+      child: GestureDetector(
+        onTap: () => context.push(card.routePath),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 6),
+          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+          decoration: BoxDecoration(
+            color: isMine ? AppColors.primary : AppColors.surfaceVariant,
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(16),
+              topRight: const Radius.circular(16),
+              bottomLeft: isMine ? const Radius.circular(16) : const Radius.circular(4),
+              bottomRight: isMine ? const Radius.circular(4) : const Radius.circular(16),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Thumbnail
+              if (card.imageUrl != null)
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                  child: Image.network(
+                    card.imageUrl!,
+                    height: 140,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  ),
+                ),
+              // Card body
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(icon, size: 13,
+                            color: isMine ? Colors.white70 : AppColors.textSecondary),
+                        const SizedBox(width: 4),
+                        Text(
+                          card.kindLabel.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
+                            color: isMine ? Colors.white70 : AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      card.title,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: isMine ? Colors.white : AppColors.textPrimary,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      card.subtitle,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isMine ? Colors.white70 : AppColors.textSecondary,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Text(
+                          'View listing',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: isMine ? Colors.white : AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                        Icon(Icons.arrow_forward_ios_rounded,
+                            size: 10,
+                            color: isMine ? Colors.white : AppColors.primary),
+                        const Spacer(),
+                        Text(
+                          time,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: isMine ? Colors.white54 : AppColors.textTertiary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

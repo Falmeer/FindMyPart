@@ -27,14 +27,20 @@ class IssuesRepository {
     return IssueModel.fromJson(response.data['data'] as Map<String, dynamic>);
   }
 
-  Future<void> sendOffer(int issueId, {required String message, double? price}) async {
-    await _client.post('/vehicle-issues/$issueId/offers', data: {
-      'message': message,
-      if (price != null) 'price': price,
-    });
+  Future<List<IssueCommentModel>> getComments(int issueId, {int afterId = 0}) async {
+    final response = await _client.get(
+      '/vehicle-issues/$issueId/comments',
+      queryParameters: afterId > 0 ? {'after_id': afterId} : null,
+    );
+    final data = response.data['data'] as List;
+    return data.map((e) => IssueCommentModel.fromJson(e as Map<String, dynamic>)).toList();
   }
 
-  Future<void> updateOffer(int issueId, int offerId, String status) async {
-    await _client.patch('/vehicle-issues/$issueId/offers/$offerId', data: {'status': status});
+  Future<IssueCommentModel> postComment(int issueId, String body) async {
+    final response = await _client.post(
+      '/vehicle-issues/$issueId/comments',
+      data: {'body': body},
+    );
+    return IssueCommentModel.fromJson(response.data['data'] as Map<String, dynamic>);
   }
 }

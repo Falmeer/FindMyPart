@@ -1,7 +1,9 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
+import '../../../../core/errors/app_exception.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_text_field.dart';
@@ -19,15 +21,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  String _selectedRole = 'customer';
   String? _completePhone;
   bool _phoneValid = false;
-
-  static const _roles = [
-    ('customer', 'Customer', Icons.person_outline),
-    ('garage', 'Garage Owner', Icons.car_repair),
-    ('yard_owner', 'Yard / Salvage Owner', Icons.directions_car_outlined),
-  ];
+  bool _loading = false;
 
   @override
   void dispose() {
@@ -38,7 +34,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   Future<void> _register() async {
-    if (!_formKey.currentState!.validate()) return;
+    FocusScope.of(context).unfocus();
+    if (!_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please fill in all required fields correctly'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
     if (!_phoneValid || _completePhone == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -48,26 +53,48 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       );
       return;
     }
-    await ref.read(authStateProvider.notifier).register(
-          name: _nameController.text.trim(),
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-          role: _selectedRole,
-          phone: _completePhone,
-        );
-    if (mounted) {
-      final error = ref.read(authStateProvider).error;
-      if (error != null) {
+    setState(() => _loading = true);
+    try {
+      await ref.read(authStateProvider.notifier).register(
+            name: _nameController.text.trim(),
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+            role: 'customer',
+            phone: _completePhone,
+          );
+      if (!mounted) return;
+      final authState = ref.read(authStateProvider);
+      if (authState.hasError) {
+        final msg = _friendlyError(authState.error);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.toString()), backgroundColor: AppColors.error),
+          SnackBar(content: Text(msg), backgroundColor: AppColors.error),
         );
+      } else {
+        context.go('/');
       }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_friendlyError(e)), backgroundColor: AppColors.error),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
+  }
+
+  String _friendlyError(Object? error) {
+    if (error is DioException) {
+      final inner = error.error;
+      if (inner is AppException) return inner.message;
+      if (error.message != null && error.message!.isNotEmpty) return error.message!;
+    }
+    if (error is AppException) return error.message;
+    // Don't expose internal Dart errors to the user
+    return 'Registration failed. Please try again.';
   }
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authStateProvider);
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -93,16 +120,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: 28),
-                Text('I am a...', style: theme.textTheme.titleMedium),
-                const SizedBox(height: 12),
-                ..._roles.map((role) => _RoleTile(
-                      label: role.$2,
-                      icon: role.$3,
-                      value: role.$1,
-                      selected: _selectedRole == role.$1,
-                      onTap: () => setState(() => _selectedRole = role.$1),
-                    )),
-                const SizedBox(height: 24),
                 AppTextField(
                   label: 'Full Name',
                   controller: _nameController,
@@ -153,11 +170,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   keyboardType: TextInputType.phone,
                   onChanged: (phone) {
                     _completePhone = phone.completeNumber;
-                    _phoneValid = phone.isValidNumber();
+                    try {
+                      _phoneValid = phone.isValidNumber();
+                    } catch (_) {
+                      _phoneValid = false;
+                    }
                   },
                   validator: (phone) {
                     if (phone == null || phone.number.isEmpty) return 'Phone number is required';
-                    if (!phone.isValidNumber()) return 'Enter a valid phone number';
                     return null;
                   },
                   invalidNumberMessage: 'Invalid phone number',
@@ -177,8 +197,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 const SizedBox(height: 32),
                 AppButton(
                   label: 'Create Account',
-                  onPressed: _register,
-                  isLoading: authState.isLoading,
+                  onPressed: _loading ? null : _register,
+                  isLoading: _loading,
                 ),
                 const SizedBox(height: 20),
                 Row(
@@ -196,6 +216,55 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => context.go('/'),
+                    icon: const Icon(Icons.explore_outlined, size: 18),
+                    label: const Text('Browse as Guest'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.textSecondary,
+                      side: const BorderSide(color: AppColors.border),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE7F7E7),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF25D366).withValues(alpha: 0.4)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.info_outline, size: 18, color: Color(0xFF128C7E)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: RichText(
+                          text: const TextSpan(
+                            style: TextStyle(fontSize: 13, color: Color(0xFF075E54), height: 1.5),
+                            children: [
+                              TextSpan(
+                                text: 'For Garages & Scrapyard registration, ',
+                              ),
+                              TextSpan(
+                                text: 'please contact +973 33399330 on WhatsApp',
+                                style: TextStyle(fontWeight: FontWeight.w700),
+                              ),
+                              TextSpan(
+                                text: ' to provide business details and verification.',
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 24),
               ],
@@ -220,54 +289,3 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 }
 
-class _RoleTile extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final String value;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _RoleTile({
-    required this.label,
-    required this.icon,
-    required this.value,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.primaryLight : AppColors.surfaceVariant,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: selected ? AppColors.primary : AppColors.border,
-            width: selected ? 1.5 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, size: 22, color: selected ? AppColors.primary : AppColors.textSecondary),
-            const SizedBox(width: 12),
-            Text(
-              label,
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: selected ? AppColors.primary : AppColors.textPrimary,
-              ),
-            ),
-            const Spacer(),
-            if (selected)
-              const Icon(Icons.check_circle, color: AppColors.primary, size: 20),
-          ],
-        ),
-      ),
-    );
-  }
-}

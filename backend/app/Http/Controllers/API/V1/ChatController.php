@@ -6,7 +6,7 @@ use App\Events\MessageSent;
 use App\Http\Controllers\Controller;
 use App\Models\Chat;
 use App\Models\Message;
-use App\Models\User;
+use App\Notifications\NewMessageNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -108,7 +108,7 @@ class ChatController extends Controller
         $attachmentUrl = null;
         if ($request->hasFile('image')) {
             $path = $request->file('image')->store('chat-images', 'public');
-            $attachmentUrl = url('storage/' . $path);
+            $attachmentUrl = url('api/v1/files/' . $path);
         }
 
         $message = Message::create([
@@ -124,6 +124,11 @@ class ChatController extends Controller
             broadcast(new MessageSent($message));
         } catch (\Throwable) {
             // Reverb not running — message saved, real-time delivery skipped
+        }
+
+        $recipient = $chat->participants()->where('user_id', '!=', $request->user()->id)->first();
+        if ($recipient) {
+            $recipient->notify(new NewMessageNotification($message));
         }
 
         return response()->json([

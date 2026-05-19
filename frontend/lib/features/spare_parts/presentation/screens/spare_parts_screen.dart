@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/services/reverb_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/shimmer_card.dart';
@@ -25,9 +27,26 @@ class _SparePartsScreenState extends ConsumerState<SparePartsScreen> {
   final _searchController = TextEditingController();
   String? _search;
   String _selectedCategory = 'All';
+  Timer? _refreshTimer;
+  final _reverb = ReverbPublicChannel();
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      ref.invalidate(sparePartsListProvider);
+    });
+    _reverb.connect(
+      channelName: 'parts',
+      eventName: 'PartListed',
+      onEvent: (_) => ref.invalidate(sparePartsListProvider),
+    );
+  }
 
   @override
   void dispose() {
+    _refreshTimer?.cancel();
+    _reverb.dispose();
     _searchController.dispose();
     super.dispose();
   }

@@ -15,7 +15,7 @@ class RegisterRequest extends FormRequest
             'email' => 'required|string|email|max:255|unique:users',
             'phone' => 'nullable|string|max:20',
             'password' => 'required|string|min:8|confirmed',
-            'role' => 'required|in:customer,garage,yard_owner',
+            'role' => 'required|in:customer',
         ];
     }
 }
