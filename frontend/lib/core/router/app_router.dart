@@ -49,9 +49,21 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (onSplash) return isLoggedIn ? '/' : '/auth/login';
       if (isLoggedIn && isAuthRoute) return '/';
 
-      // Must-change-password gate (admin-created business accounts, first login)
+      // Phone verification gate — customers after register, business accounts on first login
+      final onPhoneVerify = location == '/phone-verify';
+      if (isLoggedIn && authState.value?.phoneVerified == false && !onPhoneVerify) {
+        return '/phone-verify';
+      }
+      if (isLoggedIn && authState.value?.phoneVerified == true && onPhoneVerify) {
+        return '/';
+      }
+
+      // Must-change-password gate — only after phone is verified (business accounts)
       final onChangePass = location == '/profile/change-password';
-      if (isLoggedIn && authState.value?.mustChangePassword == true && !onChangePass) {
+      if (isLoggedIn &&
+          authState.value?.phoneVerified == true &&
+          authState.value?.mustChangePassword == true &&
+          !onChangePass) {
         return '/profile/change-password';
       }
 

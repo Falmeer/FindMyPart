@@ -1,7 +1,9 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
+import '../../../../core/errors/app_exception.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_text_field.dart';
@@ -45,10 +47,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final error = ref.read(authStateProvider).error;
       if (error != null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.toString()), backgroundColor: AppColors.error),
+          SnackBar(content: Text(_friendlyError(error)), backgroundColor: AppColors.error),
         );
       }
     }
+  }
+
+  String _friendlyError(Object? error) {
+    if (error is DioException) {
+      final inner = error.error;
+      if (inner is AppException) return inner.message;
+      if (error.message != null && error.message!.isNotEmpty) return error.message!;
+    }
+    if (error is AppException) return error.message;
+    return 'Login failed. Please try again.';
   }
 
   String _detectInitialCountry() {

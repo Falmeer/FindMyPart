@@ -28,10 +28,27 @@ class _PhoneVerificationScreenState extends ConsumerState<PhoneVerificationScree
     _startCountdown();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNodes[0].requestFocus();
-      // Pick up any dev code that was set during registration or resend
       final code = ref.read(devOtpCodeProvider);
-      if (code != null) setState(() => _devCode = code);
+      if (code != null) {
+        setState(() => _devCode = code);
+      } else {
+        // No code in memory — user returned to app before verifying, or coming
+        // from a login that didn't auto-send (e.g. restored session).
+        // Backend rate-limits to once per 60 s, so this is safe to call silently.
+        _sendInitialOtp();
+      }
     });
+  }
+
+  Future<void> _sendInitialOtp() async {
+    try {
+      await ref.read(authStateProvider.notifier).sendOtp();
+      final devCode = ref.read(devOtpCodeProvider);
+      if (mounted && devCode != null) setState(() => _devCode = devCode);
+    } catch (_) {
+      // 429 (rate-limited) or Twilio error — a code was already sent recently,
+      // so we just leave the screen open and let the user hit Resend when ready.
+    }
   }
 
   @override

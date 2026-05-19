@@ -83,13 +83,29 @@ class AuthController extends Controller
         $user->tokens()->delete();
         $token = $user->createToken('auth_token')->plainTextToken;
 
+        // Auto-send OTP when phone is not yet verified
+        $devCode = null;
+        if ($user->phone && is_null($user->phone_verified_at)) {
+            try {
+                $devCode = app(OtpService::class)->send($user);
+            } catch (\Throwable $e) {
+                Log::error('Post-login OTP failed: ' . $e->getMessage());
+            }
+        }
+
+        $data = [
+            'user'  => new UserResource($user),
+            'token' => $token,
+        ];
+
+        if (! config('services.twilio.sid') && $devCode !== null) {
+            $data['dev_code'] = $devCode;
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Login successful',
-            'data' => [
-                'user' => new UserResource($user),
-                'token' => $token,
-            ],
+            'data'    => $data,
         ]);
     }
 

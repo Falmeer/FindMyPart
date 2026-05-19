@@ -21,11 +21,15 @@ class AuthNotifier extends AsyncNotifier<UserModel?> {
     }
   }
 
-  Future<void> login(String email, String password) async {
+  Future<void> login(String phone, String password) async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(
-      () => ref.read(authRepositoryProvider).login(email, password),
+    final result = await AsyncValue.guard(
+      () => ref.read(authRepositoryProvider).login(phone, password),
     );
+    if (result.value?.devCode != null) {
+      ref.read(devOtpCodeProvider.notifier).state = result.value!.devCode;
+    }
+    state = result.whenData((r) => r.user);
   }
 
   Future<void> register({

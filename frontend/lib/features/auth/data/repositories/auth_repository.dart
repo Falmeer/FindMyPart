@@ -14,7 +14,7 @@ class AuthRepository {
 
   AuthRepository(this._client);
 
-  Future<UserModel> login(String phone, String password) async {
+  Future<({UserModel user, String? devCode})> login(String phone, String password) async {
     final response = await _client.post('/auth/login', data: {
       'phone': phone,
       'password': password,
@@ -22,7 +22,7 @@ class AuthRepository {
     final data = response.data['data'];
     final user = UserModel.fromJson({...data['user'], 'token': data['token']});
     await _persistSession(user);
-    return user;
+    return (user: user, devCode: data['dev_code'] as String?);
   }
 
   Future<({UserModel user, String? devCode})> register({
